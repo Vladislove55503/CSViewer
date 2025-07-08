@@ -16,26 +16,26 @@ def get_args():
     )
     parser.add_argument(
         '-f',
-        '--file', 
-        type=str, 
+        '--file',
+        type=str,
         help='The path to the file'
     )
     parser.add_argument(
         '-w',
-        '--where', 
-        type=str, 
+        '--where',
+        type=str,
         help='Filtering parameter in the "column=value" format'
     )
     parser.add_argument(
         '-a',
-        '--aggregate', 
-        type=str, 
+        '--aggregate',
+        type=str,
         help='Aggregation parameter in the "column=value" format'
     )
     parser.add_argument(
         '-ob',
-        '--order-by', 
-        type=str, 
+        '--order-by',
+        type=str,
         help='Sorting parameter in the "column=value" format'
     )
     args = parser.parse_args()
@@ -43,7 +43,7 @@ def get_args():
 
 
 def get_path_to_csv_file(
-    path: str | None, 
+    path: str | None,
     listdir: list = os.listdir()
 ) -> str:
     '''Return the path to the csv file, or terminate the program.'''
@@ -103,7 +103,6 @@ def get_where_params(column_types: dict, params: str) -> dict | None:
     except:
         sys.exit('Error: incorrect format of the "--where" argument')
 
-
     if where_params['column'] not in column_types:
         sys.exit('Error: invalid column in the "--where" argument')
 
@@ -138,7 +137,6 @@ def get_aggregate_params(column_types: dict, params: str) -> dict | None:
     except:
         sys.exit('Error: incorrect format of the "--aggregate" argument')
 
-
     if aggregate_params['column'] not in column_types:
         sys.exit('Error: invalid column in the "--aggregate" argument')
 
@@ -166,7 +164,6 @@ def get_order_by_params(column_types: dict, params: str) -> dict | None:
         order_by_params = match.groupdict()
     except:
         sys.exit('Error: incorrect format of the "--order_by" argument')
-
 
     if order_by_params['column'] not in column_types:
         sys.exit('Error: invalid column in the "--order-by" argument')
@@ -200,32 +197,32 @@ def get_list_where(list_objs: List[dict], params: dict) -> List[dict]:
     '''Change the list according to the "--where" condition.'''
     if params['operator'] == '=':
         list_objs = [
-            obj for obj in list_objs 
+            obj for obj in list_objs
             if obj[params['column']] == params['value']
         ]
 
     elif params['operator'] == '<':
         list_objs = [
-            obj for obj in list_objs 
+            obj for obj in list_objs
             if obj[params['column']] < params['value']
         ]
 
     elif params['operator'] == '>':
         list_objs = [
-            obj for obj in list_objs 
+            obj for obj in list_objs
             if obj[params['column']] > params['value']
         ]
-    
+
     return list_objs
 
 
 def aggregate_list_objs(list_objs: List[dict], params: dict) -> List[tuple]:
     '''Aggregate the list according to the "--aggregate" condition.'''
     if len(list_objs) == 0:
-            return [
-                    (params['value'],), 
-                    ('Error: There are no objects for aggregation',)
-                ]
+        return [
+            (params['value'],),
+            ('Error: There are no objects for aggregation',)
+        ]
 
     if params['value'] == 'avg':
         total_amount = 0
@@ -261,8 +258,8 @@ def get_list_order_by(list_objs: List[dict], params: dict) -> List[dict]:
 
     elif params['value'] == 'desc':
         sorted_list = sorted(
-            list_objs, 
-            key=itemgetter(params['column']), 
+            list_objs,
+            key=itemgetter(params['column']),
             reverse=True
         )
 
@@ -270,14 +267,14 @@ def get_list_order_by(list_objs: List[dict], params: dict) -> List[dict]:
 
 
 def main(
-    list_objs: List[dict], 
+    list_objs: List[dict],
     where_params: dict | None,
     aggregate_params: dict | None,
     order_by_params: dict | None
 ) -> List[dict]:
     '''Edit the list and output the resulting table.'''
     if order_by_params and aggregate_params:
-        sys.exit('Error: the "--order-by" argument is not accepted together ' 
+        sys.exit('Error: the "--order-by" argument is not accepted together '
                  'with the "--aggregate" argument')
 
     if where_params:
@@ -285,7 +282,7 @@ def main(
 
     if aggregate_params:
         aggregated_data = aggregate_list_objs(
-            list_objs=list_objs, 
+            list_objs=list_objs,
             params=aggregate_params
         )
         print(tabulate(aggregated_data, headers='firstrow', tablefmt='grid'))
@@ -293,7 +290,7 @@ def main(
 
     if order_by_params:
         list_objs = get_list_order_by(
-            list_objs=list_objs, 
+            list_objs=list_objs,
             params=order_by_params
         )
 
@@ -308,7 +305,7 @@ if __name__ == '__main__':
     column_types = get_column_types(path_to_csv_file)
 
     where_params = get_where_params(
-        column_types=column_types, 
+        column_types=column_types,
         params=args.where
     )
     aggregate_params = get_aggregate_params(
@@ -319,14 +316,14 @@ if __name__ == '__main__':
         column_types=column_types,
         params=args.order_by
     )
-    
+
     list_objs_of_file = read_lines_of_file(
-        path=path_to_csv_file, 
+        path=path_to_csv_file,
         column_types=column_types
     )
 
     main(
-        list_objs=list_objs_of_file, 
+        list_objs=list_objs_of_file,
         where_params=where_params,
         aggregate_params=aggregate_params,
         order_by_params=order_by_params

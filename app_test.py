@@ -1,17 +1,16 @@
 import csv
-import os
 
 import pytest
 
-from main import (get_column_types, get_path_to_csv_file, get_where_params, 
-                  get_aggregate_params, get_order_by_params, 
-                  read_lines_of_file, get_list_where, aggregate_list_objs, 
+from main import (get_column_types, get_path_to_csv_file, get_where_params,
+                  get_aggregate_params, get_order_by_params,
+                  read_lines_of_file, get_list_where, aggregate_list_objs,
                   get_list_order_by, main)
 
 
 def create_dir_or_file(
-    path, 
-    directory_name: str | None = None, 
+    path,
+    directory_name: str | None = None,
     file_name: str | None = None
 ) -> list:
     '''Create a directory or file and return the list of absolute paths.'''
@@ -30,111 +29,87 @@ def create_dir_or_file(
     return result
 
 
-def test_get_path_to_csv_file_1(tmp_path):
-    listdir = create_dir_or_file(
-        path=tmp_path, 
-        file_name='file.csv'
-    )
-    path = None
-    assert get_path_to_csv_file(path, listdir) == tmp_path / 'file.csv'
+@pytest.mark.parametrize('path, directory_name, file_name, final_path', [
+    (None, None, 'file.csv', 'file.csv'),
+    ('file.csv', None, 'file.csv', 'file.csv'),
+])
+def test_get_path_to_csv_file(
+    tmp_path,
+    path,
+    directory_name,
+    file_name,
+    final_path
+):
+    listdir = []
+
+    if directory_name:
+        d = tmp_path / directory_name
+        d.mkdir()
+        listdir.append(d)
+
+    if file_name:
+        f = tmp_path / file_name
+        f.touch()
+        listdir.append(f)
+
+    if path:
+        path = tmp_path / path
+
+    assert get_path_to_csv_file(path, listdir) == tmp_path / final_path
 
 
-def test_get_path_to_csv_file_2(tmp_path):
-    listdir = create_dir_or_file(
-        path=tmp_path, 
-        directory_name='directory.csv'
-    )
-    path = None
+@pytest.mark.parametrize('path, directory_name, file_name, expected_result', [
+    (None, 'directory.csv', None, 'Error: file not found'),
+    (None, None, None, 'Error: file not found'),
+    ('file.txt', None, 'file.txt', 'Error: incorrect file extension'),
+    ('file.txt', None, None, 'Error: file not found'),
+    ('file.csv', None, None, 'Error: file not found'),
+    ('directory.csv', 'directory.csv', None, 'Error: file not found'),
+])
+def test_exception_get_path_to_csv_file(
+    tmp_path,
+    path,
+    directory_name,
+    file_name,
+    expected_result
+):
+    listdir = []
 
-    with pytest.raises(SystemExit) as e:
-        get_path_to_csv_file(path, listdir)
+    if directory_name:
+        d = tmp_path / directory_name
+        d.mkdir()
+        listdir.append(d)
 
-    assert e.value.code == 'Error: file not found'
+    if file_name:
+        f = tmp_path / file_name
+        f.touch()
+        listdir.append(f)
 
-
-def test_get_path_to_csv_file_3(tmp_path):
-    listdir = create_dir_or_file(path=tmp_path)
-    path = None
-
-    with pytest.raises(SystemExit) as e:
-        get_path_to_csv_file(path, listdir)
-
-    assert e.value.code == 'Error: file not found'
-
-
-def test_get_path_to_csv_file_4(tmp_path):
-    listdir = create_dir_or_file(
-        path=tmp_path,
-        file_name='file.txt',
-    )
-    path = tmp_path / 'file.txt'
-
-    with pytest.raises(SystemExit) as e:
-        get_path_to_csv_file(path, listdir)
-
-    assert e.value.code == 'Error: incorrect file extension'
-
-
-def test_get_path_to_csv_file_5(tmp_path):
-    listdir = create_dir_or_file(
-        path=tmp_path
-    )
-    path = tmp_path / 'file.txt'
-
-    with pytest.raises(SystemExit) as e:
-        get_path_to_csv_file(path, listdir)
-
-    assert e.value.code == 'Error: file not found'
-
-
-def test_get_path_to_csv_file_6(tmp_path):
-    listdir = create_dir_or_file(
-        path=tmp_path
-    )
-    path = tmp_path / 'file.csv'
+    if path:
+        path = tmp_path / path
 
     with pytest.raises(SystemExit) as e:
         get_path_to_csv_file(path, listdir)
 
-    assert e.value.code == 'Error: file not found'
-
-
-def test_get_path_to_csv_file_7(tmp_path):
-    listdir = create_dir_or_file(
-        path=tmp_path,
-        file_name='file.csv'
-    )
-    path = tmp_path / 'file.csv'
-    assert get_path_to_csv_file(path, listdir) == tmp_path / 'file.csv'
-
-
-def test_get_path_to_csv_file_8(tmp_path):
-    listdir = create_dir_or_file(
-        path=tmp_path,
-        directory_name='directory.csv'
-    )
-    path = tmp_path / 'directory.csv'
-
-    with pytest.raises(SystemExit) as e:
-        get_path_to_csv_file(path, listdir)
-
-    assert e.value.code == 'Error: file not found'
+    assert e.value.code == expected_result
 
 
 @pytest.mark.parametrize('data_to_csv, expected_result', [
     (
-        [['name', 'year', 'age', 'website'], 
-         ['alex', '1985', '40.5', '55.com']], 
+        [
+            ['name', 'year', 'age', 'website'],
+            ['alex', '1985', '40.5', '55.com'],
+        ],
         {'name': str, 'year': int, 'age': float, 'website': str}
     ),
 ])
 def test_get_column_types(tmp_path, data_to_csv, expected_result):
     listdir = create_dir_or_file(
-        path=tmp_path, 
+        path=tmp_path,
         file_name='file.csv'
     )
     path = tmp_path / listdir[0]
-    
+
     with open(path, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerows(data_to_csv)
@@ -147,7 +122,7 @@ def test_get_column_types(tmp_path, data_to_csv, expected_result):
     ('year<10',   {'column': 'year', 'operator': '<', 'value': 10}),
     ('age>30.1',  {'column': 'age', 'operator': '>', 'value': 30.1}),
     (
-        'name=galaxy z flip 5',  
+        'name=galaxy z flip 5',
         {'column': 'name', 'operator': '=', 'value': 'galaxy z flip 5'}
     ),
     (None, None),
@@ -161,10 +136,10 @@ def test_long_column_and_value_in_get_where_params():
     params = 'name lastname middlename=john carter bob'
     column_types = {'name lastname middlename': str}
     expected_result = {
-            'column': 'name lastname middlename', 
-            'operator': '=', 
-            'value': 'john carter bob'
-        }
+        'column': 'name lastname middlename',
+        'operator': '=',
+        'value': 'john carter bob'
+    }
     assert get_where_params(column_types, params) == expected_result
 
 
@@ -218,7 +193,7 @@ def test_exception_get_aggregate_params(params, expected_result):
     assert e.value.code == expected_result
 
 
-@pytest.mark.parametrize('params, expected_result',[
+@pytest.mark.parametrize('params, expected_result', [
     ('name=asc',  {'column': 'name', 'operator': '=', 'value': 'asc'}),
     (None, None),
 ])
@@ -248,16 +223,18 @@ def test_exception_get_order_by_params(params, expected_result):
 
 @pytest.mark.parametrize('data_to_csv, column_types, expected_result', [
     (
-        [['name', 'year', 'age', 'website'], 
-         ['alex', '1985', '40.5', '55.com']],
-        {'name': str, 'year': int, 'age': float, 'website': str}, 
+        [
+            ['name', 'year', 'age', 'website'],
+            ['alex', '1985', '40.5', '55.com'],
+        ],
+        {'name': str, 'year': int, 'age': float, 'website': str},
         [{'name': 'alex', 'year': 1985, 'age': 40.5, 'website': '55.com'}]
     ),
 ])
 def test_read_lines_of_file(
-    tmp_path, 
-    data_to_csv, 
-    column_types, 
+    tmp_path,
+    data_to_csv,
+    column_types,
     expected_result
 ):
     listdir = create_dir_or_file(
@@ -396,7 +373,7 @@ def test_aggregate_list_objs(params, expected_result):
 
 
 @pytest.mark.parametrize('list_objs, params, expected_result', [
-    (   
+    (
         [],
         {'column': 'year', 'operator': '=', 'value': 'avg'},
         [('avg',), ('Error: There are no objects for aggregation',)]
@@ -474,36 +451,36 @@ def test_get_list_order_by(params, expected_result):
 
 @pytest.mark.parametrize(
     'where_params, aggregate_params, order_by_params, expected_result', [
-    (
-        None, 
-        None, 
-        None, 
-        [
-            {'name': 'mark', 'year': 1990, 'age': 35.0},
-            {'name': 'alex', 'year': 1985, 'age': 40.5},
-            {'name': 'cole', 'year': 2000, 'age': 25.0},
-        ]
-    ),
-    (
-        {'column': 'name', 'operator': '>', 'value': 'alex'},
-        None, 
-        None,
-        [
-            {'name': 'mark', 'year': 1990, 'age': 35.0},
-            {'name': 'cole', 'year': 2000, 'age': 25.0},
-        ]
-    ),
-    (
-        None,
-        None, 
-        {'column': 'name', 'operator': '=', 'value': 'desc'}, 
-        [
-            {'name': 'mark', 'year': 1990, 'age': 35.0},
-            {'name': 'cole', 'year': 2000, 'age': 25.0},
-            {'name': 'alex', 'year': 1985, 'age': 40.5},
-        ]
-    ),
-])
+        (
+            None,
+            None,
+            None,
+            [
+                {'name': 'mark', 'year': 1990, 'age': 35.0},
+                {'name': 'alex', 'year': 1985, 'age': 40.5},
+                {'name': 'cole', 'year': 2000, 'age': 25.0},
+            ]
+        ),
+        (
+            {'column': 'name', 'operator': '>', 'value': 'alex'},
+            None,
+            None,
+            [
+                {'name': 'mark', 'year': 1990, 'age': 35.0},
+                {'name': 'cole', 'year': 2000, 'age': 25.0},
+            ]
+        ),
+        (
+            None,
+            None,
+            {'column': 'name', 'operator': '=', 'value': 'desc'},
+            [
+                {'name': 'mark', 'year': 1990, 'age': 35.0},
+                {'name': 'cole', 'year': 2000, 'age': 25.0},
+                {'name': 'alex', 'year': 1985, 'age': 40.5},
+            ]
+        ),
+    ])
 def test_main(
     where_params,
     aggregate_params,
@@ -517,7 +494,7 @@ def test_main(
     ]
 
     assert main(
-        list_objs=data, 
+        list_objs=data,
         where_params=where_params,
         aggregate_params=aggregate_params,
         order_by_params=order_by_params
@@ -526,20 +503,20 @@ def test_main(
 
 @pytest.mark.parametrize(
     'where_params, aggregate_params, order_by_params, expected_result', [
-    (
-        None,
-        {'column': 'year', 'operator': '=', 'value': 'avg'}, 
-        {'column': 'name', 'operator': '=', 'value': 'asc'}, 
-        'Error: the "--order-by" argument is not accepted together ' 
-        'with the "--aggregate" argument'
-    ),
-    (
-        None,
-        {'column': 'age', 'operator': '=', 'value': 'avg'},
-        None,
-        0
-    ),
-])
+        (
+            None,
+            {'column': 'year', 'operator': '=', 'value': 'avg'},
+            {'column': 'name', 'operator': '=', 'value': 'asc'},
+            'Error: the "--order-by" argument is not accepted together '
+            'with the "--aggregate" argument'
+        ),
+        (
+            None,
+            {'column': 'age', 'operator': '=', 'value': 'avg'},
+            None,
+            0
+        ),
+    ])
 def test_exception_main(
     where_params,
     aggregate_params,
@@ -554,7 +531,7 @@ def test_exception_main(
 
     with pytest.raises(SystemExit) as e:
         main(
-            list_objs=data, 
+            list_objs=data,
             where_params=where_params,
             aggregate_params=aggregate_params,
             order_by_params=order_by_params
